@@ -1,0 +1,7 @@
+numpy 
+pandas
+matplotlib
+seaborn
+plotly
+python-dotenv
+google-api-python-client
