@@ -3,17 +3,11 @@ pandas==2.0.3
 numpy==1.24.3
 matplotlib==3.7.2
 seaborn==0.12.2
-google-api-python-client==2.100.0
 youtube-transcript-api==0.6.1
 python-dotenv==1.0.0
 plotly==5.15.0
 wordcloud==1.9.2
-# Audio transcription dependencies
-yt-dlp==2023.9.24
-pydub==0.25.1
-# Google Speech-to-Text
-google-cloud-speech==2.21.0
-google-auth==2.23.0
-openai-whisper==20231117
-torch==2.1.0
-torchaudio==2.1.0
+google-api-python-client
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
