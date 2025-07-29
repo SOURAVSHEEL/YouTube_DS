@@ -80,24 +80,36 @@ def process_video_data(video_data):
     df['engagement_rate'] = (df['likes'] / df['views'].replace(0, 1)) * 100
     df['comment_rate'] = (df['comments'] / df['views'].replace(0, 1)) * 100
     
-    # Process dates - Handle timezone issues
+    # Process dates - Handle timezone issues properly
     df['published_date'] = pd.to_datetime(df['published_date'])
     
-    # Handle timezone-aware vs timezone-naive datetime subtraction
+    # Safe timezone handling
     try:
-        # Try with timezone-aware current time
-        if df['published_date'].dt.tz is not None:
-            now = pd.Timestamp.now(tz=df['published_date'].dt.tz.iloc[0] if len(df) > 0 else 'UTC')
+        if len(df) > 0:
+            # Get timezone info from the first date
+            first_date = df['published_date'].iloc[0]
+            if hasattr(first_date, 'tz') and first_date.tz is not None:
+                tz_info = first_date.tz
+                now = pd.Timestamp.now(tz=tz_info)
+                df['days_since_published'] = (now - df['published_date']).dt.days
+            else:
+                # Handle timezone-naive dates
+                now = pd.Timestamp.now()
+                df['days_since_published'] = (now - df['published_date']).dt.days
         else:
-            now = pd.Timestamp.now()
-        df['days_since_published'] = (now - df['published_date']).dt.days
-    except TypeError:
-        # Fallback: convert both to timezone-naive
+            df['days_since_published'] = pd.Series([], dtype='int64')
+            
+    except Exception as e:
+        # Fallback: convert everything to timezone-naive
         now = pd.Timestamp.now().tz_localize(None)
-        published_dates_naive = df['published_date'].dt.tz_localize(None)
-        df['days_since_published'] = (now - published_dates_naive).dt.days
+        if df['published_date'].dt.tz is not None:
+            published_naive = df['published_date'].dt.tz_localize(None)
+        else:
+            published_naive = df['published_date']
+        df['days_since_published'] = (now - published_naive).dt.days
     
     return df
+
 
 
 def get_channel_summary_stats(df):

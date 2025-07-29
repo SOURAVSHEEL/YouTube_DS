@@ -194,6 +194,25 @@ def handle_transcript_tab(yt_analytics):
         st.subheader("🎥 Quick Access - Current Channel Videos")
         
         video_df = st.session_state.current_videos
+        
+        # Check if we need to process the data
+        needs_processing = 'engagement_rate' not in video_df.columns
+        
+        if needs_processing:
+            with st.spinner("Processing video data..."):
+                try:
+                    from data_processor import process_video_data
+                    # Convert DataFrame to list of dictionaries for processing
+                    video_data = video_df.to_dict('records')
+                    processed_df = process_video_data(video_data)
+                    st.session_state.current_videos = processed_df
+                    video_df = processed_df
+                except Exception as e:
+                    st.warning(f"Could not process video data: {str(e)}")
+                    # Add basic engagement rate calculation
+                    video_df = video_df.copy()
+                    video_df['engagement_rate'] = (video_df['likes'] / video_df['views'].replace(0, 1)) * 100
+        
         selected_video = st.selectbox(
             "Select a video for transcript extraction",
             options=video_df['title'].tolist()
@@ -206,7 +225,15 @@ def handle_transcript_tab(yt_analytics):
             with col1:
                 st.write(f"**Video:** {video_row['title']}")
                 st.write(f"**Views:** {video_row['views']:,}")
-                st.write(f"**Engagement Rate:** {video_row['engagement_rate']:.2f}%")
+                
+                # Safe display of engagement rate
+                try:
+                    engagement_rate = video_row.get('engagement_rate', 0)
+                    if engagement_rate == 0 and 'likes' in video_row and 'views' in video_row:
+                        engagement_rate = (video_row['likes'] / max(video_row['views'], 1)) * 100
+                    st.write(f"**Engagement Rate:** {engagement_rate:.2f}%")
+                except Exception:
+                    st.write("**Engagement Rate:** N/A")
             
             with col2:
                 if st.button("📝 Get Transcript"):
@@ -220,3 +247,4 @@ def handle_transcript_tab(yt_analytics):
                             st.text_area("Transcript", transcript_result['text'], height=300)
                         else:
                             st.error(f"❌ Error: {transcript_result['error']}")
+
