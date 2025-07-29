@@ -1,5 +1,5 @@
 """
-Data processing and analysis functions
+Data processing and analysis functions - Public Data Only
 """
 import pandas as pd
 import numpy as np
@@ -21,7 +21,7 @@ def load_predefined_channels():
         'UCV0qA-eDDICsRR9rPcnG7tw',  # Joma Tech
         'UCWN3xxRkmTPmbKwht9FuE5A',  # Siraj Raval
         'UCiT9RITQ9PW6BhXK0y2jaeg',  # Ken Jee
-        'UCV8e2g4IWQqK71bbzGDEI4Q'   # Data Professor
+        'UCV8e2g4IWQqK71bbzGDEI4Q'   # Tech With Tim
     ]
 
 def process_channel_data(channel_data):
@@ -32,35 +32,6 @@ def process_channel_data(channel_data):
     df['created_year'] = pd.to_datetime(df['created_date']).dt.year
     df['avg_views_per_video'] = df['total_views'] / df['total_videos'].replace(0, 1)
     df['subscriber_to_video_ratio'] = df['subscribers'] / df['total_videos'].replace(0, 1)
-    
-    return df
-
-def calculate_engagement_metrics(video_data):
-    """Calculate engagement metrics for video data"""
-    df = pd.DataFrame(video_data)
-    
-    # Calculate engagement rate
-    df['engagement_rate'] = (df['likes'] / df['views'].replace(0, 1)) * 100
-    df['comment_rate'] = (df['comments'] / df['views'].replace(0, 1)) * 100
-    
-    # Add published date processing - Fix timezone issue
-    df['published_date'] = pd.to_datetime(df['published_date'])
-    
-    # Handle timezone issues
-    try:
-        if df['published_date'].dt.tz is not None:
-            now = pd.Timestamp.now(tz=df['published_date'].dt.tz.iloc[0] if len(df) > 0 else 'UTC')
-        else:
-            now = pd.Timestamp.now()
-        df['days_since_published'] = (now - df['published_date']).dt.days
-    except (TypeError, AttributeError):
-        # Fallback: convert both to timezone-naive
-        now = pd.Timestamp.now().tz_localize(None)
-        if df['published_date'].dt.tz is not None:
-            published_dates_naive = df['published_date'].dt.tz_localize(None)
-        else:
-            published_dates_naive = df['published_date']
-        df['days_since_published'] = (now - published_dates_naive).dt.days
     
     return df
 
@@ -80,37 +51,21 @@ def process_video_data(video_data):
     df['engagement_rate'] = (df['likes'] / df['views'].replace(0, 1)) * 100
     df['comment_rate'] = (df['comments'] / df['views'].replace(0, 1)) * 100
     
-    # Process dates - Handle timezone issues properly
+    # Process dates
     df['published_date'] = pd.to_datetime(df['published_date'])
     
-    # Safe timezone handling
+    # Calculate days since published (simplified timezone handling)
     try:
-        if len(df) > 0:
-            # Get timezone info from the first date
-            first_date = df['published_date'].iloc[0]
-            if hasattr(first_date, 'tz') and first_date.tz is not None:
-                tz_info = first_date.tz
-                now = pd.Timestamp.now(tz=tz_info)
-                df['days_since_published'] = (now - df['published_date']).dt.days
-            else:
-                # Handle timezone-naive dates
-                now = pd.Timestamp.now()
-                df['days_since_published'] = (now - df['published_date']).dt.days
-        else:
-            df['days_since_published'] = pd.Series([], dtype='int64')
-            
-    except Exception as e:
-        # Fallback: convert everything to timezone-naive
         now = pd.Timestamp.now().tz_localize(None)
         if df['published_date'].dt.tz is not None:
             published_naive = df['published_date'].dt.tz_localize(None)
         else:
             published_naive = df['published_date']
         df['days_since_published'] = (now - published_naive).dt.days
+    except Exception:
+        df['days_since_published'] = 0
     
     return df
-
-
 
 def get_channel_summary_stats(df):
     """Generate summary statistics for channels"""
@@ -124,4 +79,31 @@ def get_channel_summary_stats(df):
         'avg_views_per_channel': df['total_views'].mean(),
         'median_subscribers': df['subscribers'].median(),
         'top_channel': df.loc[df['subscribers'].idxmax(), 'channel_title'] if len(df) > 0 else 'N/A'
+    }
+
+def get_video_summary_stats(df):
+    """Generate summary statistics for videos"""
+    if df.empty:
+        return {
+            'total_videos': 0,
+            'total_views': 0,
+            'total_likes': 0,
+            'total_comments': 0,
+            'avg_views': 0,
+            'avg_engagement_rate': 0,
+            'most_viewed_video': 'N/A'
+        }
+    
+    return {
+        'total_videos': len(df),
+        'total_views': int(df['views'].sum()),
+        'total_likes': int(df['likes'].sum()),
+        'total_comments': int(df['comments'].sum()),
+        'avg_views': int(df['views'].mean()),
+        'avg_engagement_rate': float(df['engagement_rate'].mean()),
+        'most_viewed_video': df.loc[df['views'].idxmax(), 'title'] if len(df) > 0 else 'N/A',
+        'avg_likes': int(df['likes'].mean()),
+        'avg_comments': int(df['comments'].mean()),
+        'median_views': int(df['views'].median()),
+        'top_engagement_video': df.loc[df['engagement_rate'].idxmax(), 'title'] if len(df) > 0 else 'N/A'
     }

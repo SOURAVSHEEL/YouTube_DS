@@ -1,5 +1,5 @@
 """
-Chart and visualization functions
+Chart and visualization functions - Simplified for public data
 """
 import plotly.express as px
 import plotly.graph_objects as go
@@ -7,7 +7,116 @@ from plotly.subplots import make_subplots
 import pandas as pd
 
 def create_channel_comparison_chart(df):
-    """Create interactive comparison charts"""
+    """Create interactive comparison charts - adapted for single/multiple channels"""
+    is_single_channel = len(df) == 1
+    
+    if is_single_channel:
+        return create_single_channel_dashboard(df.iloc[0])
+    else:
+        return create_multi_channel_dashboard(df)
+
+def create_single_channel_dashboard(channel_data):
+    """Create dashboard for single channel analysis"""
+    fig = make_subplots(
+        rows=2, cols=2,
+        subplot_titles=(
+            'Channel Metrics', 
+            'Performance Ratios',
+            'Channel Information', 
+            'Engagement Score'
+        ),
+        specs=[
+            [{"type": "bar"}, {"type": "scatter"}],
+            [{"type": "table"}, {"type": "indicator"}]
+        ]
+    )
+    
+    # Chart 1: Channel Metrics
+    metrics = ['Subscribers', 'Total Videos', 'Total Views (M)']
+    values = [
+        channel_data['subscribers'],
+        channel_data['total_videos'],
+        channel_data['total_views'] / 1_000_000
+    ]
+    
+    fig.add_trace(
+        go.Bar(
+            x=metrics,
+            y=values,
+            marker_color=['#FF6B6B', '#4ECDC4', '#45B7D1'],
+            name='Channel Metrics'
+        ),
+        row=1, col=1
+    )
+    
+    # Chart 2: Performance Ratios
+    ratio_metrics = ['Avg Views/Video', 'Subscribers/Video']
+    ratio_values = [
+        channel_data['avg_views_per_video'],
+        channel_data['subscriber_to_video_ratio']
+    ]
+    
+    fig.add_trace(
+        go.Scatter(
+            x=ratio_metrics,
+            y=ratio_values,
+            mode='markers+lines',
+            marker=dict(size=15, color='orange'),
+            line=dict(color='orange', width=3),
+            name='Performance Ratios'
+        ),
+        row=1, col=2
+    )
+    
+    # Chart 3: Channel Information Table
+    info_data = [
+        ['Channel Name', channel_data['channel_title']],
+        ['Country', channel_data['country']],
+        ['Created Year', str(channel_data['created_year'])],
+        ['Subscribers', f"{channel_data['subscribers']:,}"],
+        ['Total Videos', f"{channel_data['total_videos']:,}"],
+        ['Total Views', f"{channel_data['total_views']:,}"]
+    ]
+    
+    fig.add_trace(
+        go.Table(
+            header=dict(values=['Metric', 'Value'], fill_color='lightblue'),
+            cells=dict(values=list(zip(*info_data)), fill_color='lightgray')
+        ),
+        row=2, col=1
+    )
+    
+    # Chart 4: Views per Subscriber Score
+    views_per_sub = channel_data['total_views'] / max(channel_data['subscribers'], 1)
+    
+    fig.add_trace(
+        go.Indicator(
+            mode="gauge+number",
+            value=min(1000, views_per_sub),
+            title={'text': "Views/Subscriber"},
+            gauge={
+                'axis': {'range': [None, 1000]},
+                'bar': {'color': "darkblue"},
+                'steps': [
+                    {'range': [0, 50], 'color': "lightgray"},
+                    {'range': [50, 200], 'color': "yellow"},
+                    {'range': [200, 1000], 'color': "green"}
+                ]
+            }
+        ),
+        row=2, col=2
+    )
+    
+    fig.update_layout(
+        height=800,
+        showlegend=False,
+        title_text=f"Channel Analytics: {channel_data['channel_title']}"
+    )
+    
+    return fig
+
+def create_multi_channel_dashboard(df):
+    """Create dashboard for multiple channel comparison"""
     fig = make_subplots(
         rows=2, cols=2,
         subplot_titles=('Subscribers vs Views', 'Videos vs Subscribers', 
@@ -55,12 +164,11 @@ def create_channel_comparison_chart(df):
     )
     
     fig.update_layout(height=800, showlegend=True, 
-                     title_text="YouTube Channel Analytics Dashboard")
+                     title_text="Multi-Channel Analytics")
     return fig
 
 def create_video_performance_chart(video_df, channel_name):
     """Create video performance visualization"""
-    # Calculate engagement rate if it doesn't exist
     if 'engagement_rate' not in video_df.columns:
         video_df = video_df.copy()
         video_df['engagement_rate'] = (video_df['likes'] / video_df['views'].replace(0, 1)) * 100
@@ -93,12 +201,10 @@ def create_correlation_heatmap(df):
 
 def create_engagement_trends_chart(video_df):
     """Create engagement trends over time"""
-    # Ensure we have engagement_rate column
     if 'engagement_rate' not in video_df.columns:
         video_df = video_df.copy()
         video_df['engagement_rate'] = (video_df['likes'] / video_df['views'].replace(0, 1)) * 100
     
-    # Ensure published_date is datetime
     if not pd.api.types.is_datetime64_any_dtype(video_df['published_date']):
         video_df['published_date'] = pd.to_datetime(video_df['published_date'])
     
@@ -130,22 +236,4 @@ def create_engagement_trends_chart(video_df):
     fig.update_yaxes(title_text="Average Views", secondary_y=False)
     fig.update_yaxes(title_text="Engagement Rate (%)", secondary_y=True)
     
-    return fig
-
-def create_simple_video_chart(video_df, channel_name):
-    """Create a simple video performance chart without engagement rate"""
-    top_videos = video_df.nlargest(10, 'views')
-    
-    fig = px.bar(
-        top_videos, 
-        x='views', 
-        y='title',
-        orientation='h',
-        title=f"Top 10 Videos by Views - {channel_name}",
-        labels={'views': 'Views', 'title': 'Video Title'},
-        color='likes',
-        color_continuous_scale='blues',
-        hover_data=['likes', 'comments']
-    )
-    fig.update_layout(height=600)
     return fig

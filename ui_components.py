@@ -1,5 +1,5 @@
 """
-Streamlit UI components and layouts
+Streamlit UI components and layouts - Simplified
 """
 import streamlit as st
 import pandas as pd
@@ -28,13 +28,6 @@ def load_custom_css():
             padding: 1rem;
             border-radius: 0.5rem;
             border-left: 5px solid #FF0000;
-        }
-        .channel-card {
-            background-color: #ffffff;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 1rem;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -119,31 +112,26 @@ def display_top_channels_table(df):
     ]
     st.dataframe(top_channels, use_container_width=True)
 
-def display_video_transcript_interface():
-    """Display video transcript extraction interface"""
-    st.header("📝 Video Transcript Extractor")
+def display_video_metrics_cards(stats):
+    """Display video metrics in card layout"""
+    col1, col2, col3, col4 = st.columns(4)
     
-    # Video URL/ID input
-    video_input = st.text_input(
-        "Enter YouTube Video URL or Video ID",
-        placeholder="https://www.youtube.com/watch?v=VIDEO_ID or just VIDEO_ID"
-    )
+    with col1:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        st.metric("Total Videos", stats['total_videos'])
+        st.markdown('</div>', unsafe_allow_html=True)
     
-    # Extract video ID from URL if needed
-    video_id = None
-    if video_input:
-        if 'youtube.com/watch?v=' in video_input:
-            video_id = video_input.split('v=')[1].split('&')[0]
-        elif 'youtu.be/' in video_input:
-            video_id = video_input.split('youtu.be/')[1].split('?')[0]
-        else:
-            video_id = video_input
+    with col2:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        st.metric("Total Views", f"{stats['total_views']:,}")
+        st.markdown('</div>', unsafe_allow_html=True)
     
-    # Language preferences
-    languages = st.multiselect(
-        "Preferred Languages (in order of preference)",
-        ['en', 'hi', 'es', 'fr', 'de', 'ja', 'ko'],
-        default=['en', 'hi']
-    )
+    with col3:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        st.metric("Total Likes", f"{stats['total_likes']:,}")
+        st.markdown('</div>', unsafe_allow_html=True)
     
-    return video_id, languages
+    with col4:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        st.metric("Avg Engagement", f"{stats['avg_engagement_rate']:.2f}%")
+        st.markdown('</div>', unsafe_allow_html=True)
