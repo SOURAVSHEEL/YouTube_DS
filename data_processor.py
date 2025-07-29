@@ -24,6 +24,17 @@ def load_predefined_channels():
         'UCV8e2g4IWQqK71bbzGDEI4Q'   # Data Professor
     ]
 
+def process_channel_data(channel_data):
+    """Process raw channel data into DataFrame with additional metrics"""
+    df = pd.DataFrame(channel_data)
+    
+    # Add calculated fields
+    df['created_year'] = pd.to_datetime(df['created_date']).dt.year
+    df['avg_views_per_video'] = df['total_views'] / df['total_videos'].replace(0, 1)
+    df['subscriber_to_video_ratio'] = df['subscribers'] / df['total_videos'].replace(0, 1)
+    
+    return df
+
 def calculate_engagement_metrics(video_data):
     """Calculate engagement metrics for video data"""
     df = pd.DataFrame(video_data)
@@ -50,21 +61,6 @@ def calculate_engagement_metrics(video_data):
         else:
             published_dates_naive = df['published_date']
         df['days_since_published'] = (now - published_dates_naive).dt.days
-    
-    return df
-
-
-def calculate_engagement_metrics(video_data):
-    """Calculate engagement metrics for video data"""
-    df = pd.DataFrame(video_data)
-    
-    # Calculate engagement rate
-    df['engagement_rate'] = (df['likes'] / df['views'].replace(0, 1)) * 100
-    df['comment_rate'] = (df['comments'] / df['views'].replace(0, 1)) * 100
-    
-    # Add published date processing
-    df['published_date'] = pd.to_datetime(df['published_date'])
-    df['days_since_published'] = (pd.Timestamp.now() - df['published_date']).dt.days
     
     return df
 
