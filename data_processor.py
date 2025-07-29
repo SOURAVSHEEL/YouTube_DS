@@ -65,11 +65,25 @@ def process_video_data(video_data):
     df['engagement_rate'] = (df['likes'] / df['views'].replace(0, 1)) * 100
     df['comment_rate'] = (df['comments'] / df['views'].replace(0, 1)) * 100
     
-    # Process dates
+    # Process dates - Handle timezone issues
     df['published_date'] = pd.to_datetime(df['published_date'])
-    df['days_since_published'] = (pd.Timestamp.now() - df['published_date']).dt.days
+    
+    # Handle timezone-aware vs timezone-naive datetime subtraction
+    try:
+        # Try with timezone-aware current time
+        if df['published_date'].dt.tz is not None:
+            now = pd.Timestamp.now(tz=df['published_date'].dt.tz.iloc[0] if len(df) > 0 else 'UTC')
+        else:
+            now = pd.Timestamp.now()
+        df['days_since_published'] = (now - df['published_date']).dt.days
+    except TypeError:
+        # Fallback: convert both to timezone-naive
+        now = pd.Timestamp.now().tz_localize(None)
+        published_dates_naive = df['published_date'].dt.tz_localize(None)
+        df['days_since_published'] = (now - published_dates_naive).dt.days
     
     return df
+
 
 def get_channel_summary_stats(df):
     """Generate summary statistics for channels"""
